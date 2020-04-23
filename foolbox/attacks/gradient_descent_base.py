@@ -246,12 +246,12 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
             gradientsCum = 0
             for mc in range(mc):
                 _, gradients = self.value_and_grad(loss_fn, x)
-                import pdb
-                pdb.set_trace()
-                assert not (gradients == gradientsCum).all()
+                # import pdb
+                # pdb.set_trace()
+                # assert not (gradients == gradientsCum).all()
                 gradientsCum += gradients
 
-            gradients = self.normalize(gradients, x=x, bounds=model.bounds)
+            gradients = self.normalize(gradientsCum, x=x, bounds=model.bounds)
             x = x + stepsize * gradients
             x = self.project(x, x0, epsilon)
             x = ep.clip(x, *model.bounds)
