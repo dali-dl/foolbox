@@ -210,13 +210,6 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
     Args:
         random_start : Controls whether to randomly start within allowed epsilon ball.
     """
-
-    def __init__(self, *, random_start: bool = False, mc: int = 1):
-        super().__init__(
-            rel_stepsize=1.0, steps=1, random_start=random_start,
-        )
-        self.mc = mc
-
     def run(
             self,
             model: Model,
@@ -224,6 +217,7 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
             criterion: Union[Misclassification, T],
             *,
             epsilon: float,
+            mc: int,
             **kwargs: Any,
     ) -> T:
         raise_if_kwargs(kwargs)
@@ -242,8 +236,6 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
         else:
             stepsize = self.abs_stepsize
 
-        x = x0
-
         if self.random_start:
             x = self.get_random_start(x0, epsilon)
             x = ep.clip(x, *model.bounds)
@@ -252,7 +244,7 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
 
         for _ in range(self.steps):
             gradientsCum = 0
-            for mc in range(self.mc):
+            for mc in range(mc):
                 _, gradients = self.value_and_grad(loss_fn, x)
                 import pdb
                 pdb.set_trace()

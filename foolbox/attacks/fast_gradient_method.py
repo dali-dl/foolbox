@@ -50,7 +50,7 @@ class LinfFastGradientAttackMC(LinfBaseGradientDescentMCSampling):
         random_start : Controls whether to randomly start within allowed epsilon ball.
     """
 
-    def __init__(self, *, random_start: bool = False, mc: int = 1):
+    def __init__(self, *, random_start: bool = False):
         super().__init__(
-            rel_stepsize=1.0, steps=1, random_start=random_start, mc=mc,
+            rel_stepsize=1.0, steps=1, random_start=random_start,
         )
