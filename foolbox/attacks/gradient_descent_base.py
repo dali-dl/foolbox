@@ -214,22 +214,16 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
             self,
             model: Model,
             inputs: T,
-            criterion: Union[Misclassification, T],
+            label: T,
             *,
             epsilon: float,
             mc: int,
+            loss_fn: Any,
             **kwargs: Any,
     ) -> T:
         raise_if_kwargs(kwargs)
         x0, restore_type = ep.astensor_(inputs)
-        criterion_ = get_criterion(criterion)
-        del inputs, criterion, kwargs
-
-        if not isinstance(criterion_, Misclassification):
-            raise ValueError("unsupported criterion")
-
-        labels = criterion_.labels
-        loss_fn = self.get_loss_fn(model, labels)
+        del inputs, kwargs
 
         if self.abs_stepsize is None:
             stepsize = self.rel_stepsize * epsilon
@@ -245,13 +239,14 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
         for _ in range(self.steps):
             gradientsCum = 0
             for mc in range(mc):
-                _, gradients = self.value_and_grad(loss_fn, x)
+                logits = model.logits(x)
+                loss = loss_fn(logits, label)
+                loss.backward()
+                gradientsCum += x.grad.data
                 import pdb
                 pdb.set_trace()
-                assert not (gradients == gradientsCum).all()
-                gradientsCum += gradients
 
-            gradients = self.normalize(gradients, x=x, bounds=model.bounds)
+            gradients = self.normalize(gradientsCum, x=x, bounds=model.bounds)
             x = x + stepsize * gradients
             x = self.project(x, x0, epsilon)
             x = ep.clip(x, *model.bounds)
