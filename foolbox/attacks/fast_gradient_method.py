@@ -1,6 +1,7 @@
 from .gradient_descent_base import L1BaseGradientDescent
 from .gradient_descent_base import L2BaseGradientDescent
 from .gradient_descent_base import LinfBaseGradientDescent
+from .gradient_descent_base import LinfBaseGradientDescentMCSampling
 
 
 class L1FastGradientAttack(L1BaseGradientDescent):
@@ -39,4 +40,17 @@ class LinfFastGradientAttack(LinfBaseGradientDescent):
     def __init__(self, *, random_start: bool = False):
         super().__init__(
             rel_stepsize=1.0, steps=1, random_start=random_start,
+        )
+
+
+class LinfFastGradientAttackMC(LinfBaseGradientDescentMCSampling):
+    """Fast Gradient Sign Method (FGSM)
+
+    Args:
+        random_start : Controls whether to randomly start within allowed epsilon ball.
+    """
+
+    def __init__(self, *, random_start: bool = False, mc: int = 1):
+        super().__init__(
+            rel_stepsize=1.0, steps=1, random_start=random_start, mc=mc,
         )

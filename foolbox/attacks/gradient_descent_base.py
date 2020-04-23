@@ -1,32 +1,28 @@
-from typing import Union, Any, Optional, Callable, Tuple
 from abc import ABC, abstractmethod
+from typing import Union, Any, Optional, Callable, Tuple
+
 import eagerpy as ep
-
-from ..devutils import flatten
-from ..devutils import atleast_kd
-
-from ..types import Bounds
-
-from ..models.base import Model
-
-from ..criteria import Misclassification
-
-from ..distances import l1, l2, linf
 
 from .base import FixedEpsilonAttack
 from .base import T
 from .base import get_criterion
 from .base import raise_if_kwargs
+from ..criteria import Misclassification
+from ..devutils import atleast_kd
+from ..devutils import flatten
+from ..distances import l1, l2, linf
+from ..models.base import Model
+from ..types import Bounds
 
 
 class BaseGradientDescent(FixedEpsilonAttack, ABC):
     def __init__(
-        self,
-        *,
-        rel_stepsize: float,
-        abs_stepsize: Optional[float] = None,
-        steps: int,
-        random_start: bool,
+            self,
+            *,
+            rel_stepsize: float,
+            abs_stepsize: Optional[float] = None,
+            steps: int,
+            random_start: bool,
     ):
         self.rel_stepsize = rel_stepsize
         self.abs_stepsize = abs_stepsize
@@ -34,7 +30,7 @@ class BaseGradientDescent(FixedEpsilonAttack, ABC):
         self.random_start = random_start
 
     def get_loss_fn(
-        self, model: Model, labels: ep.Tensor
+            self, model: Model, labels: ep.Tensor
     ) -> Callable[[ep.Tensor], ep.Tensor]:
         # can be overridden by users
         def loss_fn(inputs: ep.Tensor) -> ep.Tensor:
@@ -44,21 +40,21 @@ class BaseGradientDescent(FixedEpsilonAttack, ABC):
         return loss_fn
 
     def value_and_grad(
-        # can be overridden by users
-        self,
-        loss_fn: Callable[[ep.Tensor], ep.Tensor],
-        x: ep.Tensor,
+            # can be overridden by users
+            self,
+            loss_fn: Callable[[ep.Tensor], ep.Tensor],
+            x: ep.Tensor,
     ) -> Tuple[ep.Tensor, ep.Tensor]:
         return ep.value_and_grad(loss_fn, x)
 
     def run(
-        self,
-        model: Model,
-        inputs: T,
-        criterion: Union[Misclassification, T],
-        *,
-        epsilon: float,
-        **kwargs: Any,
+            self,
+            model: Model,
+            inputs: T,
+            criterion: Union[Misclassification, T],
+            *,
+            epsilon: float,
+            **kwargs: Any,
     ) -> T:
         raise_if_kwargs(kwargs)
         x0, restore_type = ep.astensor_(inputs)
@@ -99,7 +95,7 @@ class BaseGradientDescent(FixedEpsilonAttack, ABC):
 
     @abstractmethod
     def normalize(
-        self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
+            self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
     ) -> ep.Tensor:
         ...
 
@@ -168,7 +164,7 @@ class L1BaseGradientDescent(BaseGradientDescent):
         return x0 + epsilon * r
 
     def normalize(
-        self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
+            self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
     ) -> ep.Tensor:
         return normalize_lp_norms(gradients, p=1)
 
@@ -185,7 +181,7 @@ class L2BaseGradientDescent(BaseGradientDescent):
         return x0 + epsilon * r
 
     def normalize(
-        self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
+            self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
     ) -> ep.Tensor:
         return normalize_lp_norms(gradients, p=2)
 
@@ -200,9 +196,72 @@ class LinfBaseGradientDescent(BaseGradientDescent):
         return x0 + ep.uniform(x0, x0.shape, -epsilon, epsilon)
 
     def normalize(
-        self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
+            self, gradients: ep.Tensor, *, x: ep.Tensor, bounds: Bounds
     ) -> ep.Tensor:
         return gradients.sign()
 
     def project(self, x: ep.Tensor, x0: ep.Tensor, epsilon: float) -> ep.Tensor:
         return x0 + ep.clip(x - x0, -epsilon, epsilon)
+
+
+class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
+    """Fast Gradient Sign Method (FGSM)
+
+    Args:
+        random_start : Controls whether to randomly start within allowed epsilon ball.
+    """
+
+    def __init__(self, *, random_start: bool = False, mc: int = 1):
+        super().__init__(
+            rel_stepsize=1.0, steps=1, random_start=random_start,
+        )
+        self.mc = mc
+
+    def run(
+            self,
+            model: Model,
+            inputs: T,
+            criterion: Union[Misclassification, T],
+            *,
+            epsilon: float,
+            **kwargs: Any,
+    ) -> T:
+        raise_if_kwargs(kwargs)
+        x0, restore_type = ep.astensor_(inputs)
+        criterion_ = get_criterion(criterion)
+        del inputs, criterion, kwargs
+
+        if not isinstance(criterion_, Misclassification):
+            raise ValueError("unsupported criterion")
+
+        labels = criterion_.labels
+        loss_fn = self.get_loss_fn(model, labels)
+
+        if self.abs_stepsize is None:
+            stepsize = self.rel_stepsize * epsilon
+        else:
+            stepsize = self.abs_stepsize
+
+        x = x0
+
+        if self.random_start:
+            x = self.get_random_start(x0, epsilon)
+            x = ep.clip(x, *model.bounds)
+        else:
+            x = x0
+
+        for _ in range(self.steps):
+            gradientsCum = 0
+            for mc in range(self.mc):
+                _, gradients = self.value_and_grad(loss_fn, x)
+                import pdb
+                pdb.set_trace()
+                assert not (gradients == gradientsCum).all()
+                gradientsCum += gradients
+
+            gradients = self.normalize(gradients, x=x, bounds=model.bounds)
+            x = x + stepsize * gradients
+            x = self.project(x, x0, epsilon)
+            x = ep.clip(x, *model.bounds)
+
+        return restore_type(x)
