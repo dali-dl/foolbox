@@ -244,7 +244,7 @@ class LinfBaseGradientDescentMCSampling(LinfBaseGradientDescent):
 
         for _ in range(self.steps):
             gradientsCum = 0
-            for mc in range(mc):
+            for _ in range(mc):
                 _, gradients = self.value_and_grad(loss_fn, x)
                 # import pdb
                 # pdb.set_trace()
