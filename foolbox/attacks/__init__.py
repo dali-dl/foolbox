@@ -47,6 +47,7 @@ from .projected_gradient_descent import (  # noqa: F401
     L1ProjectedGradientDescentAttack,
     L2ProjectedGradientDescentAttack,
     LinfProjectedGradientDescentAttack,
+    LinfProjectedGradientDescentAttackMC,
 )
 from .saltandpepper import SaltAndPepperNoiseAttack  # noqa: F401
 from .sparse_l1_descent_attack import SparseL1DescentAttack  # noqa: F401
@@ -75,3 +76,4 @@ L2PGD = L2ProjectedGradientDescentAttack
 LinfPGD = LinfProjectedGradientDescentAttack
 PGD = LinfPGD
 FGSMMC = LinfFastGradientAttackMC
+PGDMC = LinfProjectedGradientDescentAttackMC
