@@ -11,6 +11,7 @@ from .basic_iterative_method import (  # noqa: F401
     L1BasicIterativeAttack,
     L2BasicIterativeAttack,
     LinfBasicIterativeAttack,
+    LinfBasicIterativeAttackMC,
 )
 from .binarization import BinarizationRefinementAttack  # noqa: F401
 from .blended_noise import LinearSearchBlendedUniformNoiseAttack  # noqa: F401
@@ -77,3 +78,4 @@ LinfPGD = LinfProjectedGradientDescentAttack
 PGD = LinfPGD
 FGSMMC = LinfFastGradientAttackMC
 PGDMC = LinfProjectedGradientDescentAttackMC
+BIMMC = LinfBasicIterativeAttackMC
